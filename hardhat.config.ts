@@ -7,9 +7,7 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
-import "./tasks/transfer.ts";
-import "./tasks/transfer-from.ts";
-import "./tasks/approve.ts";
+import "./tasks/index.ts";
 
 dotenv.config();
 

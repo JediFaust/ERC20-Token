@@ -4,12 +4,6 @@
 import * as dotenv from "dotenv";
 
 import { task } from "hardhat/config"
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
-import { abi } from "../artifacts/contracts/ERC20.sol/ERC20.json"
 
 dotenv.config();
 
@@ -21,9 +15,9 @@ task("transfer-from", "Transfer amount to address from address")
     const [signer] = await hre.ethers.getSigners();
     const contractAddr = process.env.CONTRACT_ADDRESS;
 
-    const ERC20Contract = new hre.ethers.Contract(
+    const ERC20Contract = await hre.ethers.getContractAt(
+      "ERC20",
       contractAddr as string,
-      abi,
       signer
     );
 
