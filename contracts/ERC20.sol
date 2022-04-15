@@ -9,11 +9,14 @@ pragma solidity ^0.8.0;
 
 contract ERC20 {
    address private _owner;
+   address private _comissionReciever;
    string public name;
    string public symbol;
    uint256 public totalSupply;
+   uint256 private _comission;
    uint8 public decimals;
    
+   mapping(address => bool) private _isDex;
    mapping(address => uint256) private _balances;
    mapping(address => mapping(address => uint256)) private _allowances;
 
@@ -55,6 +58,7 @@ contract ERC20 {
 
    /// @notice Event that notices about approval operations
    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+
 
    /// @notice Function that returns token balance in exact address
    /// @param _of Address of the token holder
@@ -107,21 +111,31 @@ contract ERC20 {
    }
 
    /// @notice Function that transfers tokens from caller to another address
+   /// If _to is a Dex address, it takes _comission and sends amount to _comissionReciever
    /// @param _to Address of the reciever
    /// @param _value Amount of tokens to transfer
    /// @return true if transaction is successful
    function transfer(address _to, uint256 _value) external returns(bool) {
       require(_balances[msg.sender] >= _value, "Not enough token");
-      
+    
       _balances[msg.sender] -= _value;
-      _balances[_to] += _value;
-      emit Transfer(msg.sender, _to, _value);
+
+      if (_isDex[_to]) {
+          uint256 comission = (_value / 100) * _comission;
+          _balances[_to] += _value - comission;
+          _balances[_comissionReciever] += comission;
+          emit Transfer(msg.sender, _to, _value - comission);
+      } else {
+          _balances[_to] += _value;
+          emit Transfer(msg.sender, _to, _value);
+      }
 
       return true;
    }
 
    /// @notice Function that transfers tokens from one address to another
    /// Caller must have allowance to spend the tokens from _from address
+   /// If _to is a Dex address, it takes _comission and sends amount to _comissionReciever
    /// @param _from Address spend the tokens from
    /// @param _to Address of the reciever
    /// @param _value Amount of tokens to transfer
@@ -135,9 +149,17 @@ contract ERC20 {
       require(_balances[_from] >= _value, "Balance is not enough");
 
       _balances[_from] -= _value;
-      _balances[_to] += _value;
       _allowances[_from][msg.sender] -= _value;
-      emit Transfer(_from, _to, _value);
+
+      if (_isDex[_to]) {
+          uint256 comission = (_value / 100) * _comission;
+          _balances[_to] += _value - comission;
+          _balances[_comissionReciever] += comission;
+          emit Transfer(_from, _to, _value - comission);
+      } else {
+          _balances[_to] += _value;
+          emit Transfer(_from, _to, _value);
+      }
 
       return true;
    }
@@ -168,5 +190,45 @@ contract ERC20 {
       emit Transfer(_of, address(0), _value);
 
       return true;
+   }
+
+   /// @notice Function that sets Treasury Reciever address
+   /// @param _reciever Address of the comission reciever
+   /// @return true if transaction is successful
+   function setReciever(address _reciever) external ownerOnly returns(bool) {
+       _comissionReciever = _reciever;
+
+       return true;
+   }
+
+   /// @notice Function that sets percent amount of comission
+   /// @param _value Percent amount between 1 and 99
+   /// @return true if transaction is successful
+   function setComission(uint256 _value) external ownerOnly returns(bool) {
+       require(_value > 0 && _value < 100, "Enter right percent");
+
+       _comission = _value;
+
+       return true;
+   }
+
+   /// @notice Function that adds address of new Dex
+   /// @param _dex Address of the Dex
+   /// @return true if transaction is successful 
+   function addDex(address _dex) external ownerOnly returns(bool) {
+       require(_dex != address(0), "Zero address cant be added");
+
+       _isDex[_dex] = true;
+
+       return true;
+   }
+
+   /// @notice Function that removes added address of Dex
+   /// @param _dex Address of the Dex
+   /// @return true if transaction is successful  
+   function removeDex(address _dex) external ownerOnly returns(bool) {
+       _isDex[_dex] = false;
+
+       return true;
    }
 }

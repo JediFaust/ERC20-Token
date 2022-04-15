@@ -202,4 +202,19 @@ describe("ERC20", function () {
         await expect(erc20.safeApprove(acc1.address, 1000, 2000))
             .to.emit(erc20, 'Approval').withArgs(owner.address, acc1.address, 2000);
     })
+
+    it("should be able to get treasury", async function () {
+        const comission = 10
+        const amount = 1000
+
+        await erc20.setReciever(acc1.address)
+        await erc20.setComission(comission)
+        await erc20.addDex(acc2.address)
+
+        const transferTx = await erc20.transfer(acc2.address, amount)
+        await transferTx.wait()
+
+        expect(await erc20.balanceOf(acc1.address)).to.equal((amount / 100) * comission)
+        expect(await erc20.balanceOf(acc2.address)).to.equal(amount - (amount / 100) * comission)
+    })
 });
